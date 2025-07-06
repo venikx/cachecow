@@ -1,0 +1,14 @@
+{
+  "name": "@cachecow/image-optimization",
+  "version": "0.1.0",
+  "scripts": {
+    "prebuild": "npm install sharp --cpu=x64 --os=linux --libc=glibc --prefix functions/image-optimization"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.150",
+    "@types/node": "^24.0.10"
+  },
+  "dependencies": {
+    "sharp": "^0.34.2"
+  }
+}

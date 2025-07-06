@@ -1,21 +1,23 @@
 {
-  "name": "typescript-aws-cdk",
+  "name": "cachecow",
   "private": true,
+  "type": "module",
   "version": "0.0.1",
-  "workspaces": ["infra", "frontend"],
+  "workspaces": [
+    "infra",
+    "functions/*"
+  ],
   "scripts": {
     "deploy": "npm run deploy:cdk",
     "diff": "npm run diff:cdk",
-    "build:frontend": "npm run build -w @typescript-aws-cdk/frontend",
-    "deploy:cdk": "npm run deploy -w @typescript-aws-cdk/infra",
-    "diff:cdk": "npm run diff -w @typescript-aws-cdk/infra"
+    "deploy:cdk": "npm run deploy -w @cachecow/infra",
+    "diff:cdk": "npm run diff -w @cachecow/infra"
   },
   "devDependencies": {
-    "@tsconfig/node22": "^22.0.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.3"
+    "@tsconfig/node22": "^22.0.2",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3"
   },
-  "dependencies": {},
   "engines": {
     "npm": ">=10.9.0",
     "node": ">=22.13.0"
