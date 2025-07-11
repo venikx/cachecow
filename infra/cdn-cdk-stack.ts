@@ -19,7 +19,7 @@ export class CacheCowCdkStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const cacheBucket = new s3.Bucket(this, "CacheCowCacheBucket", {
+    const optimizedBucket = new s3.Bucket(this, "CacheCowOptimizedBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
@@ -34,16 +34,25 @@ export class CacheCowCdkStack extends cdk.Stack {
       {
         entry: "../functions/image-optimization/index.ts",
         runtime: lambda.Runtime.NODEJS_22_X,
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(10),
+        environment: {
+          SOURCE_BUCKET: sourceBucket.bucketName,
+          OPTIMIZED_BUCKET: optimizedBucket.bucketName,
+        },
         bundling: {
           sourceMap: true,
           minify: false,
           target: "es2022",
-          // TODO(Kevin): add sharp to lambda layer
           externalModules: [],
+          // TODO(Kevin): add sharp to lambda layer
           nodeModules: ["sharp"],
         },
       },
     );
+
+    sourceBucket.grantRead(imageFunction);
+    optimizedBucket.grantReadWrite(imageFunction);
 
     const imageFunctionUrl = imageFunction.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
@@ -56,7 +65,14 @@ export class CacheCowCdkStack extends cdk.Stack {
 
     const distribution = new cf.Distribution(this, "CacheCowDistribution", {
       defaultBehavior: {
-        origin: cf_origins.S3BucketOrigin.withOriginAccessControl(sourceBucket),
+        origin: new cf_origins.OriginGroup({
+          primaryOrigin:
+            cf_origins.S3BucketOrigin.withOriginAccessControl(optimizedBucket),
+          fallbackOrigin: new cf_origins.HttpOrigin(
+            cdk.Fn.parseDomainName(imageFunctionUrl.url),
+          ),
+          fallbackStatusCodes: [403, 500, 503, 504],
+        }),
         cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: false,
@@ -67,6 +83,10 @@ export class CacheCowCdkStack extends cdk.Stack {
         //  },
         //],
       },
+    });
+
+    new cdk.CfnOutput(this, "TestUrl", {
+      value: cdk.Fn.parseDomainName(imageFunctionUrl.url),
     });
 
     new cdk.CfnOutput(this, "CacheCowDistributionDomain", {
