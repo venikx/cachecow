@@ -1,0 +1,10 @@
+{
+  "name": "@cachecow/url-rewrite",
+  "version": "0.1.0",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.150"
+  }
+}
