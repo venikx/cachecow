@@ -80,7 +80,15 @@ export class CacheCowCdkStack extends cdk.Stack {
           ),
           fallbackStatusCodes: [403, 500, 503, 504],
         }),
-        cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
+        cachePolicy: new cf.CachePolicy(
+          this,
+          `ImageCachePolicy${this.node.addr}`,
+          {
+            defaultTtl: cdk.Duration.hours(24),
+            maxTtl: cdk.Duration.days(365),
+            minTtl: cdk.Duration.seconds(0),
+          },
+        ),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: false,
         functionAssociations: [
