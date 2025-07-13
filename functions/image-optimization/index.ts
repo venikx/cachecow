@@ -7,6 +7,8 @@ import {
 } from "aws-lambda";
 import sharp from "sharp";
 
+// NOTE: IThink im mixing concepts, if the s3 bucket already failed, why do I refetch it with the lambda?
+
 const s3Client = new s3.S3Client({});
 const sourceBucket = process.env.SOURCE_BUCKET!;
 const optimizedBucket = process.env.OPTIMIZED_BUCKET!;
