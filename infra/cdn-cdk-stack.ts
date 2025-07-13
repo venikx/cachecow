@@ -54,6 +54,13 @@ export class CacheCowCdkStack extends cdk.Stack {
     sourceBucket.grantRead(imageFunction);
     optimizedBucket.grantReadWrite(imageFunction);
 
+    const urlRewriteFunction = new cf.Function(this, "UrlRewriteFn", {
+      code: cf.FunctionCode.fromFile({
+        filePath: "../functions/url-rewrite/index.js",
+      }),
+      functionName: "UrlRewriteFunction",
+    });
+
     const imageFunctionUrl = imageFunction.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: {
@@ -76,12 +83,12 @@ export class CacheCowCdkStack extends cdk.Stack {
         cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: false,
-        //functionAssociations: [
-        //  {
-        //    eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-        //    function: urlRewriteFunction,
-        //  },
-        //],
+        functionAssociations: [
+          {
+            eventType: cf.FunctionEventType.VIEWER_REQUEST,
+            function: urlRewriteFunction,
+          },
+        ],
       },
     });
 

@@ -12,15 +12,29 @@ const sourceBucket = process.env.SOURCE_BUCKET!;
 const optimizedBucket = process.env.OPTIMIZED_BUCKET!;
 
 export const handler: LambdaFunctionURLHandler = async (event, context) => {
-    const key = "DSCF5881.jpg";
+    console.log(JSON.stringify(event, null, 4));
 
-    console.log(key, JSON.stringify(event, null, 4));
+    if (event.requestContext.http.method !== "GET") {
+        console.log(event);
+        return {
+            statusCode: 400,
+            body: "Unsupported method, only GET is supported.",
+        };
+    }
+
+    const imagePathArray = event.requestContext.http.path.split("/");
+    const operations = imagePathArray.pop() ?? "";
+    imagePathArray.shift();
+    const originalImagePath = imagePathArray.join("/");
+
+    const s3Key = originalImagePath + "/" + operations;
+    console.log(s3Key, originalImagePath, operations, imagePathArray);
 
     try {
         const optimizedImage = await s3Client.send(
             new s3.HeadObjectCommand({
                 Bucket: optimizedBucket,
-                Key: key,
+                Key: s3Key,
             }),
         );
 
@@ -29,7 +43,12 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
                 statusCode: 302,
                 headers: {
                     "Content-Type": "text/plain",
-                    Location: `/${key}`,
+                    "Cache-Control": "private,no-store",
+                    Location:
+                        "/" +
+                        originalImagePath +
+                        "?" +
+                        operations.replace(",", "&"),
                 },
             };
         } else {
@@ -46,7 +65,7 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
                 const originalImage = await s3Client.send(
                     new s3.GetObjectCommand({
                         Bucket: sourceBucket,
-                        Key: key,
+                        Key: originalImagePath,
                     }),
                 );
                 const originalBody = await streamToBuffer(originalImage.Body);
@@ -58,7 +77,7 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
                 await s3Client.send(
                     new s3.PutObjectCommand({
                         Bucket: optimizedBucket,
-                        Key: key,
+                        Key: s3Key,
                         Body: resizedImage,
                         ContentType: "image/jpeg",
                         CacheControl: "public, max-age=31536000, immutable",
@@ -68,8 +87,13 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
                 return {
                     statusCode: 302,
                     headers: {
-                        Location: `https://${optimizedBucket}.s3.amazonaws.com/${key}`,
+                        Location:
+                            "/" +
+                            originalImagePath +
+                            "?" +
+                            operations.replace(",", "&"),
                         "Content-Type": "text/plain",
+                        "Cache-Control": "private,no-store",
                     },
                 };
             } catch (e: any) {

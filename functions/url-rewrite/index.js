@@ -66,6 +66,7 @@ function handler(event) {
   return request;
 }
 
+// NOTE(venikx): only export when running in node
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { handler };
 }
