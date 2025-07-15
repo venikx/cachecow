@@ -81,10 +81,19 @@ export const handler: LambdaFunctionURLHandler = async (event) => {
         };
     }
 
+    const operationsJSON = Object.fromEntries(
+        operations.split(",").map((o) => o.split("=")),
+    );
     let outputBuffer: Buffer;
     try {
+        const resizingOptions: Partial<{ width: number; height: number }> = {};
+        if (operationsJSON["width"])
+            resizingOptions.width = parseInt(operationsJSON["width"]);
+        if (operationsJSON["height"])
+            resizingOptions.height = parseInt(operationsJSON["height"]);
+
         outputBuffer = await sharp(originalImageBuffer)
-            .resize(100, 100)
+            .resize(resizingOptions)
             .toBuffer();
     } catch (err) {
         console.error("Image transformation failed:", err);
