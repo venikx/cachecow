@@ -1,24 +1,43 @@
 import * as s3 from "@aws-sdk/client-s3";
+import * as sm from "@aws-sdk/client-secrets-manager";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import sharp from "sharp";
 
 // NOTE(venikx): configuration
 const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
 const OPTIMIZED_BUCKET = process.env.OPTIMIZED_BUCKET!;
+const SECRET_ARN = process.env.SECRET_ARN;
 
 const CACHE_CONTROL_OPTIMIZED = "public, max-age=31536000, immutable";
 const CACHE_CONTROL_REDIRECT = "private, no-store, no-cache";
+
 const s3Client = new s3.S3Client({});
+const smClient = new sm.SecretsManagerClient({
+    region: process.env.AWS_REGION,
+});
 
 // NOTE(venikx): CloudFront hits this lambda only when S3 doesn't have the optimized image
 export const handler: LambdaFunctionURLHandler = async (event) => {
     if (event.requestContext.http.method !== "GET") {
         return {
             statusCode: 405,
-            body: "Method not allowed",
-            headers: {
-                "Cache-Control": CACHE_CONTROL_REDIRECT,
-            },
+        };
+    }
+
+    const headers = event.headers || {};
+    const secretFromHeader =
+        headers["x-cachecow-secret"] || headers["X-CacheCow-Secret"];
+
+    if (!secretFromHeader) {
+        return {
+            statusCode: 403,
+        };
+    }
+
+    const isValidToken = await verifyToken(secretFromHeader);
+    if (!isValidToken) {
+        return {
+            statusCode: 403,
         };
     }
 
@@ -139,3 +158,15 @@ export const handler: LambdaFunctionURLHandler = async (event) => {
         },
     };
 };
+
+async function verifyToken(secretFromHeader: string): Promise<boolean> {
+    try {
+        const command = new sm.GetSecretValueCommand({ SecretId: SECRET_ARN });
+        const secretResponse = await smClient.send(command);
+        const token = JSON.parse(secretResponse.SecretString || "").token;
+        const tokenFromHeader = JSON.parse(secretFromHeader).token;
+        return token === tokenFromHeader;
+    } catch {
+        return false;
+    }
+}

@@ -5,6 +5,7 @@ import * as cf from "aws-cdk-lib/aws-cloudfront";
 import * as cf_origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambda_node from "aws-cdk-lib/aws-lambda-nodejs";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 export class CacheCowCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -28,6 +29,16 @@ export class CacheCowCdkStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    const cacheCowSecret = new secretsmanager.Secret(this, "CacheCowSecret", {
+      secretName: "CacheCowSecretToken",
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({}),
+        generateStringKey: "token",
+        excludePunctuation: true,
+        includeSpace: false,
+      },
+    });
+
     const imageFunction = new lambda_node.NodejsFunction(
       this,
       "ImageOptimizationFunction",
@@ -39,6 +50,7 @@ export class CacheCowCdkStack extends cdk.Stack {
         environment: {
           SOURCE_BUCKET: sourceBucket.bucketName,
           OPTIMIZED_BUCKET: optimizedBucket.bucketName,
+          SECRET_ARN: cacheCowSecret.secretArn,
         },
         bundling: {
           sourceMap: true,
@@ -53,6 +65,7 @@ export class CacheCowCdkStack extends cdk.Stack {
 
     sourceBucket.grantRead(imageFunction);
     optimizedBucket.grantReadWrite(imageFunction);
+    cacheCowSecret.grantRead(imageFunction);
 
     const urlRewriteFunction = new cf.Function(this, "UrlRewriteFn", {
       code: cf.FunctionCode.fromFile({
@@ -77,6 +90,11 @@ export class CacheCowCdkStack extends cdk.Stack {
             cf_origins.S3BucketOrigin.withOriginAccessControl(optimizedBucket),
           fallbackOrigin: new cf_origins.HttpOrigin(
             cdk.Fn.parseDomainName(imageFunctionUrl.url),
+            {
+              customHeaders: {
+                "X-CacheCow-Secret": cacheCowSecret.secretValue.toString(),
+              },
+            },
           ),
           fallbackStatusCodes: [403, 500, 503, 504],
         }),
