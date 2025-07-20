@@ -3,6 +3,11 @@ import * as sm from "@aws-sdk/client-secrets-manager";
 import { LambdaFunctionURLHandler } from "aws-lambda";
 import sharp from "sharp";
 
+// TODO(venikx)
+// - delete existing files
+// - setup ci/cd to deploy automtically
+// - setup a system for signed cookies and lock it down to specific paths on cloudfront
+
 // NOTE(venikx): configuration
 const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
 const OPTIMIZED_BUCKET = process.env.OPTIMIZED_BUCKET!;

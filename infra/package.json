@@ -2,7 +2,7 @@
   "name": "@cachecow/infra",
   "version": "0.0.1",
   "scripts": {
-    "deploy": "cdk deploy",
+    "deploy": "cdk deploy --all",
     "diff": "cdk diff",
     "synth": "cdk synth"
   },

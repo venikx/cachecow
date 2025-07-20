@@ -6,9 +6,14 @@ import * as cf_origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambda_node from "aws-cdk-lib/aws-lambda-nodejs";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
+
+interface CacheCowCdkStackProps extends cdk.StackProps {
+  certificateArn: string;
+}
 
 export class CacheCowCdkStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: CacheCowCdkStackProps) {
     super(scope, id, props);
 
     const sourceBucket = new s3.Bucket(this, "CacheCowSourceBucket", {
@@ -83,7 +88,15 @@ export class CacheCowCdkStack extends cdk.Stack {
       },
     });
 
+    const certificate = certificatemanager.Certificate.fromCertificateArn(
+      this,
+      "ImportedCacheCowCert",
+      props.certificateArn,
+    );
+
     const distribution = new cf.Distribution(this, "CacheCowDistribution", {
+      domainNames: ["cdn.babodigital.com"],
+      certificate,
       defaultBehavior: {
         origin: new cf_origins.OriginGroup({
           primaryOrigin:
