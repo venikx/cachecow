@@ -7,6 +7,7 @@ import sharp from "sharp";
 // - delete existing files
 // - setup ci/cd to deploy automtically
 // - setup a system for signed cookies and lock it down to specific paths on cloudfront
+// - test a porject
 
 // NOTE(venikx): configuration
 const SOURCE_BUCKET = process.env.SOURCE_BUCKET!;
